@@ -5,10 +5,10 @@ import { Server } from 'socket.io';
 const app = express();
 const server = createServer(app);
 
-// ==== CORS ====
+// ==== Socket.IO с CORS ====
 const io = new Server(server, {
   cors: {
-    origin: "*", // <-- можно заменить на URL фронтенда
+    origin: "*", // можно заменить на URL фронтенда для безопасности
     methods: ["GET", "POST"]
   }
 });
@@ -19,14 +19,9 @@ const rooms = {}; // { roomId: [socketId1, socketId2, ...] }
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  // Пользователь пытается войти или создать комнату
-  socket.on('join-room', ({ roomId, user, create }) => {
-    if (!rooms[roomId] && !create) {
-      socket.emit('room-error', { message: 'Комната не существует' });
-      return;
-    }
-
-    if (!rooms[roomId]) rooms[roomId] = [];
+  // Пользователь входит в комнату
+  socket.on('join-room', ({ roomId }) => {
+    if (!rooms[roomId]) rooms[roomId] = []; // создаём комнату, если её нет
     rooms[roomId].push(socket.id);
     socket.join(roomId);
 
