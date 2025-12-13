@@ -26,136 +26,173 @@ class VideoMeetServer {
     setupMiddleware() {
         this.app.use(cors());
         this.app.use(express.json());
-        // Исправленный путь к папке public
-        this.app.use(express.static(path.join(__dirname, 'public')));
+        
+        // ОБЯЗАТЕЛЬНО правильный путь к папке public
+        const publicPath = path.join(__dirname, 'public');
+        console.log('Путь к public папке:', publicPath);
+        
+        // Раздаем статические файлы
+        this.app.use(express.static(publicPath));
+        
+        // Дополнительно для скриптов Socket.io
+        this.app.use('/socket.io', express.static(path.join(__dirname, 'node_modules', 'socket.io', 'client-dist')));
     }
     
     setupRoutes() {
         // API для создания встречи
         this.app.post('/api/meetings', (req, res) => {
-            const { hostId, hostName } = req.body;
-            const meetingId = this.generateMeetingId();
-            
-            const meeting = {
-                id: meetingId,
-                hostId: hostId,
-                hostName: hostName,
-                participants: new Map(),
-                createdAt: new Date(),
-                settings: {
-                    allowVideo: true,
-                    allowAudio: true,
-                    allowScreenShare: true,
-                    allowChat: true,
-                    maxParticipants: 100
-                }
-            };
-            
-            this.meetings.set(meetingId, meeting);
-            
-            console.log(`Создана новая встреча: ${meetingId} хостом ${hostName}`);
-            
-            res.json({
-                success: true,
-                meetingId: meetingId,
-                message: 'Встреча создана'
-            });
+            try {
+                const { hostId, hostName } = req.body;
+                const meetingId = this.generateMeetingId();
+                
+                const meeting = {
+                    id: meetingId,
+                    hostId: hostId,
+                    hostName: hostName,
+                    participants: new Map(),
+                    createdAt: new Date(),
+                    settings: {
+                        allowVideo: true,
+                        allowAudio: true,
+                        allowScreenShare: true,
+                        allowChat: true,
+                        maxParticipants: 100
+                    }
+                };
+                
+                this.meetings.set(meetingId, meeting);
+                
+                console.log(`✅ Создана новая встреча: ${meetingId} хостом ${hostName}`);
+                
+                res.json({
+                    success: true,
+                    meetingId: meetingId,
+                    message: 'Встреча создана'
+                });
+            } catch (error) {
+                console.error('❌ Ошибка создания встречи:', error);
+                res.status(500).json({
+                    success: false,
+                    message: 'Внутренняя ошибка сервера'
+                });
+            }
         });
         
         // API для получения информации о встрече
         this.app.get('/api/meetings/:meetingId', (req, res) => {
-            const meetingId = req.params.meetingId.toUpperCase();
-            const meeting = this.meetings.get(meetingId);
-            
-            if (meeting) {
-                res.json({
-                    success: true,
-                    meetingId: meeting.id,
-                    hostName: meeting.hostName,
-                    participantCount: meeting.participants.size,
-                    createdAt: meeting.createdAt,
-                    settings: meeting.settings
-                });
-            } else {
-                res.status(404).json({
+            try {
+                const meetingId = req.params.meetingId.toUpperCase();
+                const meeting = this.meetings.get(meetingId);
+                
+                if (meeting) {
+                    res.json({
+                        success: true,
+                        meetingId: meeting.id,
+                        hostName: meeting.hostName,
+                        participantCount: meeting.participants.size,
+                        createdAt: meeting.createdAt,
+                        settings: meeting.settings
+                    });
+                } else {
+                    res.status(404).json({
+                        success: false,
+                        message: 'Встреча не найдена'
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Ошибка получения встречи:', error);
+                res.status(500).json({
                     success: false,
-                    message: 'Встреча не найдена'
+                    message: 'Внутренняя ошибка сервера'
                 });
             }
         });
         
         // API для получения списка участников
         this.app.get('/api/meetings/:meetingId/participants', (req, res) => {
-            const meetingId = req.params.meetingId.toUpperCase();
-            const meeting = this.meetings.get(meetingId);
-            
-            if (meeting) {
-                const participants = Array.from(meeting.participants.values()).map(p => ({
-                    id: p.id,
-                    name: p.name,
-                    isHost: p.isHost,
-                    joinedAt: p.joinedAt
-                }));
+            try {
+                const meetingId = req.params.meetingId.toUpperCase();
+                const meeting = this.meetings.get(meetingId);
                 
-                res.json({
-                    success: true,
-                    participants: participants
-                });
-            } else {
-                res.status(404).json({
+                if (meeting) {
+                    const participants = Array.from(meeting.participants.values()).map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        isHost: p.isHost,
+                        joinedAt: p.joinedAt
+                    }));
+                    
+                    res.json({
+                        success: true,
+                        participants: participants
+                    });
+                } else {
+                    res.status(404).json({
+                        success: false,
+                        message: 'Встреча не найдена'
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Ошибка получения участников:', error);
+                res.status(500).json({
                     success: false,
-                    message: 'Встреча не найдена'
+                    message: 'Внутренняя ошибка сервера'
                 });
             }
         });
         
         // API для завершения встречи
         this.app.delete('/api/meetings/:meetingId', (req, res) => {
-            const meetingId = req.params.meetingId.toUpperCase();
-            const meeting = this.meetings.get(meetingId);
-            
-            if (meeting) {
-                // Уведомляем всех участников
-                meeting.participants.forEach((user, socketId) => {
-                    const socket = this.io.sockets.sockets.get(socketId);
-                    if (socket) {
-                        socket.emit('meeting-ended', {
-                            meetingId: meetingId,
-                            reason: 'Владелец завершил встречу'
-                        });
-                        socket.leave(meetingId);
-                    }
-                });
+            try {
+                const meetingId = req.params.meetingId.toUpperCase();
+                const meeting = this.meetings.get(meetingId);
                 
-                this.meetings.delete(meetingId);
-                console.log(`Встреча завершена: ${meetingId}`);
-                
-                res.json({
-                    success: true,
-                    message: 'Встреча завершена'
-                });
-            } else {
-                res.status(404).json({
+                if (meeting) {
+                    // Уведомляем всех участников
+                    meeting.participants.forEach((user, socketId) => {
+                        const socket = this.io.sockets.sockets.get(socketId);
+                        if (socket) {
+                            socket.emit('meeting-ended', {
+                                meetingId: meetingId,
+                                reason: 'Владелец завершил встречу'
+                            });
+                            socket.leave(meetingId);
+                        }
+                    });
+                    
+                    this.meetings.delete(meetingId);
+                    console.log(`✅ Встреча завершена: ${meetingId}`);
+                    
+                    res.json({
+                        success: true,
+                        message: 'Встреча завершена'
+                    });
+                } else {
+                    res.status(404).json({
+                        success: false,
+                        message: 'Встреча не найдена'
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Ошибка завершения встречи:', error);
+                res.status(500).json({
                     success: false,
-                    message: 'Встреча не найдена'
+                    message: 'Внутренняя ошибка сервера'
                 });
             }
         });
         
-        // Роут для присоединения по ссылке
-        this.app.get('/join/:meetingId', (req, res) => {
-            res.sendFile(path.join(__dirname, 'public', 'index.html'));
-        });
-        
-        // Главная страница
+        // ВСЕ остальные маршруты отдают index.html (для SPA)
         this.app.get('*', (req, res) => {
-            res.sendFile(path.join(__dirname, 'public', 'index.html'));
+            const indexPath = path.join(__dirname, 'public', 'index.html');
+            console.log('Запрос к:', req.url, '→ отдаем:', indexPath);
+            res.sendFile(indexPath);
         });
     }
     
     setupSocketIO() {
         this.io.on('connection', (socket) => {
-            console.log('Новое подключение:', socket.id);
+            console.log('🔌 Новое подключение:', socket.id);
             
             // Создание встречи
             socket.on('create-meeting', (data) => {
@@ -203,7 +240,7 @@ class VideoMeetServer {
                     user: userData
                 });
                 
-                console.log(`Пользователь ${user.name} создал встречу ${meetingId}`);
+                console.log(`✅ Пользователь ${user.name} создал встречу ${meetingId}`);
             });
             
             // Присоединение к встрече
@@ -254,7 +291,7 @@ class VideoMeetServer {
                 
                 socket.emit('participants-list', participants);
                 
-                console.log(`Пользователь ${user.name} присоединился к ${meetingId}`);
+                console.log(`✅ Пользователь ${user.name} присоединился к ${meetingId}`);
             });
             
             // Сообщения чата
@@ -324,7 +361,7 @@ class VideoMeetServer {
             // Отключение
             socket.on('disconnect', () => {
                 this.handleUserLeave(socket);
-                console.log('Пользователь отключился:', socket.id);
+                console.log('🔌 Пользователь отключился:', socket.id);
             });
         });
     }
@@ -367,14 +404,14 @@ class VideoMeetServer {
                     });
                     
                     this.meetings.delete(meetingId);
-                    console.log(`Встреча завершена хостом: ${meetingId}`);
+                    console.log(`✅ Встреча завершена хостом: ${meetingId}`);
                 } else {
                     // Уведомляем остальных участников
                     socket.to(meetingId).emit('user-left', {
                         userId: userId
                     });
                     
-                    console.log(`Пользователь ${userId} покинул встречу ${meetingId}`);
+                    console.log(`✅ Пользователь ${userId} покинул встречу ${meetingId}`);
                 }
             }
             
@@ -399,7 +436,7 @@ class VideoMeetServer {
         this.server.listen(port, () => {
             console.log(`🚀 Сервер запущен на порту ${port}`);
             console.log(`🌐 Откройте http://localhost:${port}`);
-            console.log(`📁 Папка public: ${path.join(__dirname, 'public')}`);
+            console.log(`📁 Путь к public: ${path.join(__dirname, 'public')}`);
         });
     }
 }
