@@ -308,42 +308,57 @@ class VideoMeetServer {
                 }
             });
             
-            // WebRTC сигналы
+            // В методе setupSocketIO добавьте/замените обработчики WebRTC:
+
+    // WebRTC сигналы
             socket.on('offer', (data) => {
                 const { meetingId, targetUserId, offer } = data;
-                const targetUser = this.findUserByUserId(targetUserId, meetingId);
-                
+                console.log(`📡 Оффер от ${data.senderId || socket.id} для ${targetUserId}`);
+    
+    // Ищем получателя
+                const targetUser = this.findUserBySocketId(targetUserId);
                 if (targetUser) {
                     socket.to(targetUser.socketId).emit('offer', {
-                        senderId: this.users.get(socket.id)?.userId,
+                        senderId: this.users.get(socket.id)?.userId || socket.id,
                         offer: offer
                     });
                 }
             });
-            
+
             socket.on('answer', (data) => {
                 const { meetingId, targetUserId, answer } = data;
-                const targetUser = this.findUserByUserId(targetUserId, meetingId);
-                
+                console.log(`📡 Ответ от ${data.senderId || socket.id} для ${targetUserId}`);
+    
+                const targetUser = this.findUserBySocketId(targetUserId);
                 if (targetUser) {
                     socket.to(targetUser.socketId).emit('answer', {
-                        senderId: this.users.get(socket.id)?.userId,
+                        senderId: this.users.get(socket.id)?.userId || socket.id,
                         answer: answer
                     });
                 }
             });
-            
+
             socket.on('ice-candidate', (data) => {
                 const { meetingId, targetUserId, candidate } = data;
-                const targetUser = this.findUserByUserId(targetUserId, meetingId);
-                
+    
+                const targetUser = this.findUserBySocketId(targetUserId);
                 if (targetUser) {
                     socket.to(targetUser.socketId).emit('ice-candidate', {
-                        senderId: this.users.get(socket.id)?.userId,
+                        senderId: this.users.get(socket.id)?.userId || socket.id,
                         candidate: candidate
                     });
                 }
             });
+
+// Добавьте метод для поиска по socketId
+            findUserBySocketId(socketId) {
+                for (const [id, userInfo] of this.users.entries()) {
+                    if (id === socketId || userInfo.userId === socketId) {
+                        return { socketId: id, ...userInfo };
+                    }
+             }
+             return null;
+            }
             
             // Пользователь готов к медиа
             socket.on('media-ready', (data) => {
@@ -444,3 +459,4 @@ class VideoMeetServer {
 // Запуск сервера
 const server = new VideoMeetServer();
 server.start();
+
