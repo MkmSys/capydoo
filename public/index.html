@@ -148,31 +148,55 @@
         </footer>
 
         <!-- Модальное окно приглашения -->
-        <div id="inviteModal" class="modal">
-            <div class="modal-content">
-                <h2><i class="fas fa-share-alt"></i> Пригласить участников</h2>
-                <div class="invite-options">
-                    <div class="invite-option">
-                        <h4><i class="fas fa-link"></i> Ссылка</h4>
-                        <div class="link-container">
-                            <input type="text" id="meetingLink" readonly>
-                            <button id="copyInviteLink" class="btn-primary">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="invite-option">
-                        <h4><i class="fas fa-key"></i> Код встречи</h4>
-                        <div class="code-display">
-                            <span id="meetingCodeDisplay">XXXX-XXXX</span>
-                        </div>
-                    </div>
+        <!-- Модальное окно приглашения -->
+<div id="inviteModal" class="modal">
+    <div class="modal-content">
+        <h2><i class="fas fa-share-alt"></i> Пригласить участников</h2>
+        
+        <div class="invite-options">
+            <div class="invite-option">
+                <h4><i class="fas fa-link"></i> Ссылка</h4>
+                <div class="link-container">
+                    <input type="text" id="meetingLink" readonly>
+                    <button id="copyInviteLink" class="btn-primary" title="Копировать ссылку">
+                        <i class="fas fa-copy"></i> Копировать
+                    </button>
                 </div>
-                <button class="btn-close" id="closeInviteModal">Закрыть</button>
+            </div>
+            
+            <div class="invite-option">
+                <h4><i class="fas fa-key"></i> Код встречи</h4>
+                <div class="code-display">
+                    <span id="meetingCodeDisplay" class="meeting-code">XXXX-XXXX</span>
+                    <button id="copyMeetingCode" class="btn-secondary" title="Копировать код">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="invite-option">
+                <h4><i class="fas fa-share"></i> Быстрая отправка</h4>
+                <div class="share-buttons">
+                    <button id="shareWhatsApp" class="btn-share whatsapp">
+                        <i class="fab fa-whatsapp"></i> WhatsApp
+                    </button>
+                    <button id="shareTelegram" class="btn-share telegram">
+                        <i class="fab fa-telegram"></i> Telegram
+                    </button>
+                    <button id="shareEmail" class="btn-share email">
+                        <i class="fas fa-envelope"></i> Email
+                    </button>
+                </div>
             </div>
         </div>
+        
+        <div class="modal-actions">
+            <button class="btn-close" id="closeInviteModal">
+                <i class="fas fa-times"></i> Закрыть
+            </button>
+        </div>
     </div>
+</div>
 
     <!-- Подключение библиотек -->
     <script src="/socket.io/socket.io.js"></script>
