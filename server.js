@@ -15,8 +15,8 @@ class VideoMeetServer {
             }
         });
         
-        this.meetings = new Map(); // meetingId -> { hostId, participants, createdAt }
-        this.users = new Map();    // socketId -> { userId, meetingId, userData }
+        this.meetings = new Map();
+        this.users = new Map();
         
         this.setupMiddleware();
         this.setupRoutes();
@@ -26,7 +26,8 @@ class VideoMeetServer {
     setupMiddleware() {
         this.app.use(cors());
         this.app.use(express.json());
-        this.app.use(express.static(path.join(__dirname, '../public')));
+        // Исправленный путь к папке public
+        this.app.use(express.static(path.join(__dirname, 'public')));
     }
     
     setupRoutes() {
@@ -143,12 +144,12 @@ class VideoMeetServer {
         
         // Роут для присоединения по ссылке
         this.app.get('/join/:meetingId', (req, res) => {
-            res.sendFile(path.join(__dirname, '../public/index.html'));
+            res.sendFile(path.join(__dirname, 'public', 'index.html'));
         });
         
         // Главная страница
-        this.app.get('/', (req, res) => {
-            res.sendFile(path.join(__dirname, '../public/index.html'));
+        this.app.get('*', (req, res) => {
+            res.sendFile(path.join(__dirname, 'public', 'index.html'));
         });
     }
     
@@ -398,14 +399,11 @@ class VideoMeetServer {
         this.server.listen(port, () => {
             console.log(`🚀 Сервер запущен на порту ${port}`);
             console.log(`🌐 Откройте http://localhost:${port}`);
+            console.log(`📁 Папка public: ${path.join(__dirname, 'public')}`);
         });
     }
 }
 
 // Запуск сервера
-if (require.main === module) {
-    const server = new VideoMeetServer();
-    server.start();
-}
-
-module.exports = VideoMeetServer;
+const server = new VideoMeetServer();
+server.start();
