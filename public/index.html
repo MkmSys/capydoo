@@ -204,4 +204,26 @@
     <script src="/app.js"></script>
     <script src="/webrtc.js"></script>
 </body>
+
+<script>
+    // Экстренный фикс для кнопки закрытия
+setTimeout(function() {
+    const closeBtn = document.getElementById('closeInviteModal');
+    const modal = document.getElementById('inviteModal');
+    
+    if (closeBtn && modal) {
+        console.log('Найден элемент closeInviteModal, добавляем обработчик...');
+        closeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Кнопка закрытия нажата!');
+            modal.classList.remove('show');
+        });
+    } else {
+        console.error('Элементы не найдены!');
+        console.log('closeInviteModal:', closeBtn);
+        console.log('inviteModal:', modal);
+    }
+}, 1000); // Даем время на загрузку DOM
+</script>
+
 </html>
