@@ -594,3 +594,104 @@ class VideoMeetApp {
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new VideoMeetApp();
 });
+// В конструкторе класса VideoMeetApp:
+init() {
+    this.bindEvents();
+    this.setupSocketListeners();
+    this.checkElements(); // Добавьте эту строку
+}
+
+// Добавьте этот метод для проверки элементов:
+checkElements() {
+    console.log('Проверка элементов DOM:');
+    console.log('closeInviteModal элемент:', document.getElementById('closeInviteModal'));
+    console.log('inviteModal элемент:', document.getElementById('inviteModal'));
+}
+
+// Упростите метод bindEvents():
+bindEvents() {
+    // Вкладки
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            e.target.classList.add('active');
+            document.getElementById(e.target.dataset.tab + 'Tab').classList.add('active');
+        });
+    });
+    
+    // Создание встречи
+    document.getElementById('createMeetingBtn').addEventListener('click', () => {
+        this.userName = document.getElementById('hostName').value || 'Ведущий';
+        this.createMeeting();
+    });
+    
+    // Присоединение к встрече
+    document.getElementById('joinMeetingBtn').addEventListener('click', () => {
+        this.userName = document.getElementById('userName').value || 'Участник';
+        const code = document.getElementById('meetingCode').value;
+        if (code) {
+            this.joinMeeting(code);
+        } else {
+            alert('Введите код встречи');
+        }
+    });
+    
+    // Управление медиа
+    document.getElementById('toggleMicBtn').addEventListener('click', () => this.toggleMic());
+    document.getElementById('toggleCamBtn').addEventListener('click', () => this.toggleCam());
+    document.getElementById('screenShareBtn').addEventListener('click', () => this.toggleScreenShare());
+    
+    // Чат
+    document.getElementById('sendChatBtn').addEventListener('click', () => this.sendMessage());
+    document.getElementById('chatInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') this.sendMessage();
+    });
+    
+    // Управление интерфейсом
+    document.getElementById('inviteBtn').addEventListener('click', () => this.showInviteModal());
+    document.getElementById('copyLinkBtn').addEventListener('click', () => this.copyMeetingLink());
+    document.getElementById('leaveBtn').addEventListener('click', () => this.leaveMeeting());
+    
+    // Приглашение - ДОБАВЬТЕ ЭТОТ КОД:
+    document.getElementById('copyInviteLink').addEventListener('click', () => this.copyInviteLink());
+    
+    // Кнопка закрытия - ДОБАВЬТЕ ЭТУ СТРОЧКУ:
+    document.getElementById('closeInviteModal').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Кнопка закрытия нажата!');
+        this.hideInviteModal();
+    });
+    
+    // Добавьте также закрытие по клику вне модального окна:
+    document.getElementById('inviteModal').addEventListener('click', (e) => {
+        if (e.target.id === 'inviteModal') {
+            console.log('Клик вне модального окна');
+            this.hideInviteModal();
+        }
+    });
+}
+
+// Упрощенные методы для модального окна:
+showInviteModal() {
+    console.log('Показать модальное окно');
+    document.getElementById('inviteModal').classList.add('show');
+    document.getElementById('meetingCodeDisplay').textContent = this.meetingId || 'XXXX-XXXX';
+    document.getElementById('meetingLink').value = this.meetingId ? 
+        `${window.location.origin}/join/${this.meetingId}` : 
+        `${window.location.origin}/join/XXXX-XXXX`;
+}
+
+hideInviteModal() {
+    console.log('Скрыть модальное окно');
+    document.getElementById('inviteModal').classList.remove('show');
+}
+
+copyInviteLink() {
+    const link = `${window.location.origin}/join/${this.meetingId || 'XXXX-XXXX'}`;
+    navigator.clipboard.writeText(link).then(() => {
+        alert('Ссылка скопирована');
+    });
+}
