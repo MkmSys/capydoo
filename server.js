@@ -1,108 +1,54 @@
-/**
- * FULL Google Meet–like signaling server
- * Works with:
- *  - Socket.IO
- *  - Lobby (waiting room)
- *  - Rooms
- *  - Vite frontend build (client/dist)
- */
-
+// ────────────── БАЗОВЫЕ ПОДКЛЮЧЕНИЯ ──────────────
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
 
+// ────────────── EXPRESS И HTTP ──────────────
 const app = express();
 const server = http.createServer(app);
 
-/* =========================
-   SOCKET.IO
-========================= */
+// ────────────── SOCKET.IO ──────────────
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
+  cors: { origin: "*" } // разрешаем фронтенду соединяться
 });
 
-/* =========================
-   ROOMS STATE
-========================= */
+// ────────────── ROOMS ──────────────
 /*
 rooms = {
   roomId: {
     host: socketId,
-    users: Set(socketId),
-    lobby: Set(socketId)
+    users: Set(socketId)
   }
 }
 */
 const rooms = {};
 
-/* =========================
-   SOCKET LOGIC
-========================= */
+// ────────────── SOCKET EVENTS ──────────────
 io.on("connection", socket => {
   console.log("🔌 Connected:", socket.id);
 
   socket.on("join-room", ({ roomId, host }) => {
     socket.roomId = roomId;
-    socket.isHost = !!host;
 
     if (!rooms[roomId]) {
-      rooms[roomId] = {
-        host: null,
-        users: new Set(),
-        lobby: new Set()
-      };
+      rooms[roomId] = { host: null, users: new Set() };
     }
 
-    // HOST
-    if (socket.isHost) {
+    if (host) {
       rooms[roomId].host = socket.id;
-      rooms[roomId].users.add(socket.id);
-      socket.join(roomId);
-
-      console.log("👑 Host joined:", roomId);
-      return;
     }
 
-    // USER -> LOBBY
-    rooms[roomId].lobby.add(socket.id);
-    console.log("⏳ User waiting:", socket.id);
+    rooms[roomId].users.add(socket.id);
+    socket.join(roomId);
 
-    io.to(rooms[roomId].host).emit("lobby-update", {
-      waiting: Array.from(rooms[roomId].lobby)
-    });
+    socket.to(roomId).emit("user-joined", socket.id);
   });
 
-  /* ===== HOST APPROVES USER ===== */
-  socket.on("approve-user", userId => {
-    const room = rooms[socket.roomId];
-    if (!room || socket.id !== room.host) return;
-
-    if (room.lobby.has(userId)) {
-      room.lobby.delete(userId);
-      room.users.add(userId);
-
-      io.to(userId).emit("approved");
-      io.sockets.sockets.get(userId)?.join(socket.roomId);
-
-      socket.to(socket.roomId).emit("user-joined", userId);
-      console.log("✅ Approved:", userId);
-    }
+  socket.on("signal", data => {
+    io.to(data.to).emit("signal", { from: socket.id, ...data });
   });
 
-  /* ===== WEBRTC SIGNALING ===== */
-  socket.on("signal", ({ to, desc, candidate }) => {
-    io.to(to).emit("signal", {
-      from: socket.id,
-      desc,
-      candidate
-    });
-  });
-
-  /* ===== REACTIONS ===== */
   socket.on("reaction", emoji => {
     socket.to(socket.roomId).emit("reaction", {
       from: socket.id,
@@ -110,51 +56,29 @@ io.on("connection", socket => {
     });
   });
 
-  /* ===== DISCONNECT ===== */
   socket.on("disconnect", () => {
-    const roomId = socket.roomId;
-    if (!roomId || !rooms[roomId]) return;
+    const room = rooms[socket.roomId];
+    if (!room) return;
 
-    rooms[roomId].users.delete(socket.id);
-    rooms[roomId].lobby.delete(socket.id);
+    room.users.delete(socket.id);
+    socket.to(socket.roomId).emit("user-left", socket.id);
 
-    if (rooms[roomId].host === socket.id) {
-      console.log("❌ Host left, closing room:", roomId);
-      delete rooms[roomId];
-      socket.to(roomId).emit("room-closed");
-      return;
+    if (room.users.size === 0) {
+      delete rooms[socket.roomId];
     }
-
-    socket.to(roomId).emit("user-left", socket.id);
-    console.log("🔴 Disconnected:", socket.id);
   });
 });
 
-/* =========================
-   FRONTEND (VITE BUILD)
-========================= */
+// ────────────── SPA FRONTEND ──────────────
 const CLIENT_DIST = path.join(__dirname, "client", "dist");
-
 app.use(express.static(CLIENT_DIST));
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(CLIENT_DIST, "index.html"));
 });
 
-/* =========================
-   START SERVER (RAILWAY)
-========================= */
+// ────────────── START SERVER ──────────────
 const PORT = process.env.PORT || 3000;
-
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
-const path = require("path");
-
-const CLIENT_DIST = path.join(__dirname, "client", "dist");
-
-app.use(express.static(CLIENT_DIST));
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(CLIENT_DIST, "index.html"));
+  console.log("🚀 Server running on port", PORT);
 });
