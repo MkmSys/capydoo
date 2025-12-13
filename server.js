@@ -149,3 +149,12 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+const path = require("path");
+
+const CLIENT_DIST = path.join(__dirname, "client", "dist");
+
+app.use(express.static(CLIENT_DIST));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(CLIENT_DIST, "index.html"));
+});
