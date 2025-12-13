@@ -1,3 +1,12 @@
+/**
+ * FULL Google Meet–like signaling server
+ * Works with:
+ *  - Socket.IO
+ *  - Lobby (waiting room)
+ *  - Rooms
+ *  - Vite frontend build (client/dist)
+ */
+
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -5,6 +14,10 @@ const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
+
+/* =========================
+   SOCKET.IO
+========================= */
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -12,63 +25,127 @@ const io = new Server(server, {
   }
 });
 
-app.use(express.static(path.join(__dirname, "client/dist")));
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "client/dist/index.html"));
-});
-
-// Rooms storage
+/* =========================
+   ROOMS STATE
+========================= */
+/*
+rooms = {
+  roomId: {
+    host: socketId,
+    users: Set(socketId),
+    lobby: Set(socketId)
+  }
+}
+*/
 const rooms = {};
 
+/* =========================
+   SOCKET LOGIC
+========================= */
 io.on("connection", socket => {
-  console.log("User connected:", socket.id);
+  console.log("🔌 Connected:", socket.id);
 
-  socket.on("join-room", roomId => {
-    if (!rooms[roomId]) rooms[roomId] = [];
-    rooms[roomId].push(socket.id);
-    socket.join(roomId);
-
-    // Отправляем текущих пользователей
-    const otherUsers = rooms[roomId].filter(id => id !== socket.id);
-    socket.emit("all-users", otherUsers);
-
-    // Сообщаем другим, что новый пользователь подключился
-    socket.to(roomId).emit("user-joined", socket.id);
-
-    // Сохраняем roomId у сокета
+  socket.on("join-room", ({ roomId, host }) => {
     socket.roomId = roomId;
+    socket.isHost = !!host;
+
+    if (!rooms[roomId]) {
+      rooms[roomId] = {
+        host: null,
+        users: new Set(),
+        lobby: new Set()
+      };
+    }
+
+    // HOST
+    if (socket.isHost) {
+      rooms[roomId].host = socket.id;
+      rooms[roomId].users.add(socket.id);
+      socket.join(roomId);
+
+      console.log("👑 Host joined:", roomId);
+      return;
+    }
+
+    // USER -> LOBBY
+    rooms[roomId].lobby.add(socket.id);
+    console.log("⏳ User waiting:", socket.id);
+
+    io.to(rooms[roomId].host).emit("lobby-update", {
+      waiting: Array.from(rooms[roomId].lobby)
+    });
   });
 
-  socket.on("offer", payload => {
-    io.to(payload.to).emit("offer", { from: socket.id, offer: payload.offer });
-  });
+  /* ===== HOST APPROVES USER ===== */
+  socket.on("approve-user", userId => {
+    const room = rooms[socket.roomId];
+    if (!room || socket.id !== room.host) return;
 
-  socket.on("answer", payload => {
-    io.to(payload.to).emit("answer", { from: socket.id, answer: payload.answer });
-  });
+    if (room.lobby.has(userId)) {
+      room.lobby.delete(userId);
+      room.users.add(userId);
 
-  socket.on("ice-candidate", payload => {
-    io.to(payload.to).emit("ice-candidate", { from: socket.id, candidate: payload.candidate });
-  });
+      io.to(userId).emit("approved");
+      io.sockets.sockets.get(userId)?.join(socket.roomId);
 
-  // Чат
-  socket.on("chat-message", message => {
-    const roomId = socket.roomId;
-    if (roomId) {
-      socket.to(roomId).emit("chat-message", message);
+      socket.to(socket.roomId).emit("user-joined", userId);
+      console.log("✅ Approved:", userId);
     }
   });
 
+  /* ===== WEBRTC SIGNALING ===== */
+  socket.on("signal", ({ to, desc, candidate }) => {
+    io.to(to).emit("signal", {
+      from: socket.id,
+      desc,
+      candidate
+    });
+  });
+
+  /* ===== REACTIONS ===== */
+  socket.on("reaction", emoji => {
+    socket.to(socket.roomId).emit("reaction", {
+      from: socket.id,
+      emoji
+    });
+  });
+
+  /* ===== DISCONNECT ===== */
   socket.on("disconnect", () => {
     const roomId = socket.roomId;
-    if (roomId && rooms[roomId]) {
-      rooms[roomId] = rooms[roomId].filter(id => id !== socket.id);
-      socket.to(roomId).emit("user-left", socket.id);
+    if (!roomId || !rooms[roomId]) return;
+
+    rooms[roomId].users.delete(socket.id);
+    rooms[roomId].lobby.delete(socket.id);
+
+    if (rooms[roomId].host === socket.id) {
+      console.log("❌ Host left, closing room:", roomId);
+      delete rooms[roomId];
+      socket.to(roomId).emit("room-closed");
+      return;
     }
-    console.log("User disconnected:", socket.id);
+
+    socket.to(roomId).emit("user-left", socket.id);
+    console.log("🔴 Disconnected:", socket.id);
   });
 });
 
+/* =========================
+   FRONTEND (VITE BUILD)
+========================= */
+const CLIENT_DIST = path.join(__dirname, "client", "dist");
+
+app.use(express.static(CLIENT_DIST));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(CLIENT_DIST, "index.html"));
+});
+
+/* =========================
+   START SERVER (RAILWAY)
+========================= */
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Server running on port", PORT));
+
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
