@@ -9,32 +9,35 @@
 </head>
 <body>
     <!-- Модальное окно входа -->
-    <div id="joinModal" class="modal show">
-        <div class="modal-content">
-            <div class="logo">
-                <i class="fas fa-video"></i>
-                <h1>VideoMeet</h1>
-            </div>
+                    <div id="joinModal" class="modal show">
+                        <div class="modal-content">
+                            <div class="logo">
+                                <i class="fas fa-video"></i>
+                                <h1>VideoMeet</h1>
+                            </div>
+                        </div>
             
-            <div class="tabs">
-                <button class="tab-btn active" data-tab="create">Создать встречу</button>
-                <button class="tab-btn" data-tab="join">Присоединиться</button>
-            </div>
-            
-            <div id="createTab" class="tab-content active">
-                <input type="text" id="hostName" placeholder="Ваше имя" value="Ведущий">
-                <button id="createMeetingBtn" class="btn-primary">
-                    <i class="fas fa-plus"></i> Создать новую встречу
-                </button>
-                <p class="info-text">Ссылка будет создана автоматически</p>
-            </div>
-            
-            <div id="joinTab" class="tab-content">
-                <input type="text" id="userName" placeholder="Ваше имя" value="Участник">
-                <input type="text" id="meetingCode" placeholder="Код встречи или ссылка">
-                <button id="joinMeetingBtn" class="btn-primary">
-                    <i class="fas fa-sign-in-alt"></i> Присоединиться
-                </button>
+                        <div class="tabs">
+                            <button class="tab-btn active" data-tab="create">Создать встречу</button>
+                            <button class="tab-btn" data-tab="join">Присоединиться</button>
+                        </div>
+
+                        <div id="createTab" class="tab-content active">
+                            <!-- Содержимое вкладки "Создать встречу" -->
+                            <input type="text" id="hostName" placeholder="Ваше имя" value="Ведущий">
+                            <button id="createMeetingBtn" class="btn-primary">
+                                <i class="fas fa-plus"></i> Создать новую встречу
+                            </button>
+                        </div>
+
+                        <div id="joinTab" class="tab-content">
+                            <!-- Содержимое вкладки "Присоединиться" -->
+                            <input type="text" id="userName" placeholder="Ваше имя" value="Участник">
+                            <input type="text" id="meetingCode" placeholder="Код встречи">
+                            <button id="joinMeetingBtn" class="btn-primary">
+                                <i class="fas fa-sign-in-alt"></i> Присоединиться
+                        </button>
+                    </div>
                 <p class="info-text">Попросите ссылку у организатора</p>
             </div>
         </div>
