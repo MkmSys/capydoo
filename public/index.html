@@ -229,5 +229,46 @@
     }
 
     </script>
+    <script>
+    // Простой скрипт для вкладок
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Настройка вкладок...');
+        
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Удаляем активный класс у всех кнопок
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Добавляем активный класс нажатой кнопке
+                this.classList.add('active');
+                
+                // Скрываем все вкладки
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Показываем выбранную вкладку
+                const tabId = this.getAttribute('data-tab');
+                const tabToShow = document.getElementById(tabId + 'Tab');
+                
+                if (tabToShow) {
+                    tabToShow.classList.add('active');
+                    console.log('Показана вкладка:', tabId);
+                }
+            });
+        });
+        
+        // Активируем первую вкладку
+        if (tabButtons.length > 0 && tabContents.length > 0) {
+            tabButtons[0].classList.add('active');
+            tabContents[0].classList.add('active');
+        }
+        
+        console.log('Вкладки настроены');
+    });
+    </script>
 </body>
 </html>
