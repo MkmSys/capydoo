@@ -435,65 +435,113 @@ class VideoMeetApp {
         }
     }
     
-    displayRemoteVideo(userId, stream) {
-        console.log(`➕ Отображение видео для ${userId}`);
-        
-        // Удаляем старый элемент
+        displayRemoteVideo(userId, stream) {
+        console.log(`➕ Отображение видео для ${userId}`, stream);
+    
+    // Удаляем старый элемент
         const oldVideo = document.getElementById(`remote-video-${userId}`);
         if (oldVideo) oldVideo.remove();
-        
+    
         const videoContainer = document.createElement('div');
-        videoContainer.className = 'video-item';
+        videoContainer.className = 'video-container';
         videoContainer.id = `remote-video-${userId}`;
-        
-        // Проверяем есть ли видео в потоке
+        videoContainer.style.width = '100%';
+        videoContainer.style.height = '100%';
+        videoContainer.style.minHeight = '200px';
+    
+    // Проверяем есть ли видео
         const hasVideo = stream.getVideoTracks().length > 0;
-        
-        if (!hasVideo) {
-            // Только аудио - показываем заглушку
-            const userName = this.getUserName(userId) || 'Участник';
-            videoContainer.innerHTML = `
-                <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #34a853;">
-                    <div style="text-align: center; color: white;">
-                        <div style="width: 80px; height: 80px; background: white; border-radius: 50%; 
-                                    display: flex; align-items: center; justify-content: center; 
-                                    margin: 0 auto 15px; font-size: 32px; color: #34a853; font-weight: bold;">
-                            ${userName.charAt(0).toUpperCase()}
-                        </div>
-                        <div style="font-weight: bold;">${userName}</div>
-                        <div style="font-size: 12px; opacity: 0.8;">
-                            ${stream.getAudioTracks().length > 0 ? 'Только аудио' : 'Нет медиа'}
-                        </div>
-                    </div>
-                </div>
-            `;
-        } else {
-            // Есть видео - показываем видео элемент
+        const hasAudio = stream.getAudioTracks().length > 0;
+    
+        console.log(`📊 Поток ${userId}: видео=${hasVideo}, аудио=${hasAudio}`);
+    
+        if (hasVideo) {
+        // Создаем видео элемент
             const video = document.createElement('video');
+            video.id = `video-${userId}`;
             video.autoplay = true;
             video.playsInline = true;
+            video.muted = false;
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'cover';
+            video.style.background = '#000';
+            video.style.display = 'block';
+        
+        // Назначаем поток
             video.srcObject = stream;
-            
+        
+        // Обработчики
+            video.onloadedmetadata = () => {
+                console.log(`✅ Видео загружено для ${userId}`);
+                video.play().catch(e => {
+                    console.log(`⚠️ Автовоспроизведение для ${userId}:`, e);
+                });
+            };
+        
+            video.onerror = (e) => {
+                console.error(`❌ Ошибка видео ${userId}:`, e);
+            };
+        
+        // Информация о пользователе
             const userName = this.getUserName(userId) || 'Участник';
-            const overlay = document.createElement('div');
-            overlay.className = 'video-overlay';
-            overlay.innerHTML = `
-                <div class="video-info">
-                    <div class="participant-avatar">${userName.charAt(0)}</div>
+            const info = document.createElement('div');
+            info.className = 'video-info';
+            info.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 24px; height: 24px; background: #1a73e8; 
+                                border-radius: 50%; display: flex; align-items: center; 
+                                justify-content: center; color: white; font-weight: bold;">
+                        ${userName.charAt(0)}
+                    </div>
                     <span>${userName}</span>
-                    <span class="video-status">
-                        ${stream.getAudioTracks().length > 0 ? '🔊' : '🔇'}
+                    <span style="margin-left: auto; font-size: 12px;">
+                        ${hasAudio ? '🔊' : '🔇'}
                     </span>
                 </div>
             `;
-            
-            videoContainer.appendChild(video);
-            videoContainer.appendChild(overlay);
-        }
         
+            videoContainer.appendChild(video);
+            videoContainer.appendChild(info);
+        
+        } else {
+        // Заглушка если нет видео
+            const userName = this.getUserName(userId) || 'Участник';
+            videoContainer.className = 'video-container placeholder';
+            videoContainer.innerHTML = `
+                <div style="text-align: center; padding: 40px; width: 100%; height: 100%; 
+                            display: flex; flex-direction: column; align-items: center; 
+                            justify-content: center;">
+                    <div style="width: 80px; height: 80px; background: white; 
+                                border-radius: 50%; display: flex; align-items: center; 
+                                justify-content: center; margin-bottom: 20px; font-size: 32px; 
+                                color: #1a73e8; font-weight: bold;">
+                        ${userName.charAt(0).toUpperCase()}
+                    </div>
+                    <div style="font-weight: bold; color: white; margin-bottom: 10px; font-size: 16px;">
+                        ${userName}
+                    </div>
+                    <div style="color: rgba(255,255,255,0.8); font-size: 14px;">
+                        ${hasAudio ? 'Только аудио' : 'Нет медиа'}
+                    </div>
+                </div>
+            `;
+        }
+    
+    // Добавляем в сетку
         const videoGrid = document.getElementById('videoGrid');
+        const emptyState = document.getElementById('emptyState');
+    
+        if (emptyState) {
+            emptyState.style.display = 'none';
+        }
+    
         if (videoGrid) {
             videoGrid.appendChild(videoContainer);
+            console.log(`✅ Видео добавлено в сетку для ${userId}`);
+        
+        // Логируем структуру
+            console.log(`📦 Сетка содержит ${videoGrid.children.length} элементов`);
         }
     }
     
