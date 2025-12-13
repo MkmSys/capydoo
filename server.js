@@ -26,16 +26,7 @@ class VideoMeetServer {
     setupMiddleware() {
         this.app.use(cors());
         this.app.use(express.json());
-        
-        // ОБЯЗАТЕЛЬНО правильный путь к папке public
-        const publicPath = path.join(__dirname, 'public');
-        console.log('Путь к public папке:', publicPath);
-        
-        // Раздаем статические файлы
-        this.app.use(express.static(publicPath));
-        
-        // Дополнительно для скриптов Socket.io
-        this.app.use('/socket.io', express.static(path.join(__dirname, 'node_modules', 'socket.io', 'client-dist')));
+        this.app.use(express.static(path.join(__dirname, 'public')));
     }
     
     setupRoutes() {
@@ -141,59 +132,16 @@ class VideoMeetServer {
             }
         });
         
-        // API для завершения встречи
-        this.app.delete('/api/meetings/:meetingId', (req, res) => {
-            try {
-                const meetingId = req.params.meetingId.toUpperCase();
-                const meeting = this.meetings.get(meetingId);
-                
-                if (meeting) {
-                    // Уведомляем всех участников
-                    meeting.participants.forEach((user, socketId) => {
-                        const socket = this.io.sockets.sockets.get(socketId);
-                        if (socket) {
-                            socket.emit('meeting-ended', {
-                                meetingId: meetingId,
-                                reason: 'Владелец завершил встречу'
-                            });
-                            socket.leave(meetingId);
-                        }
-                    });
-                    
-                    this.meetings.delete(meetingId);
-                    console.log(`✅ Встреча завершена: ${meetingId}`);
-                    
-                    res.json({
-                        success: true,
-                        message: 'Встреча завершена'
-                    });
-                } else {
-                    res.status(404).json({
-                        success: false,
-                        message: 'Встреча не найдена'
-                    });
-                }
-            } catch (error) {
-                console.error('❌ Ошибка завершения встречи:', error);
-                res.status(500).json({
-                    success: false,
-                    message: 'Внутренняя ошибка сервера'
-                });
-            }
-        });
-        
-        // ВСЕ остальные маршруты отдают index.html (для SPA)
+        // Все остальные пути ведут на главную
         this.app.get('*', (req, res) => {
-            const indexPath = path.join(__dirname, 'public', 'index.html');
-            console.log('Запрос к:', req.url, '→ отдаем:', indexPath);
-            res.sendFile(indexPath);
+            res.sendFile(path.join(__dirname, 'public', 'index.html'));
         });
     }
     
     setupSocketIO() {
         this.io.on('connection', (socket) => {
             console.log('🔌 Новое подключение:', socket.id);
-            
+
             // Создание встречи
             socket.on('create-meeting', (data) => {
                 const { meetingId, user } = data;
@@ -308,64 +256,44 @@ class VideoMeetServer {
                 }
             });
             
-            // В методе setupSocketIO добавьте/замените обработчики WebRTC:
-
-    // WebRTC сигналы
+            // WebRTC сигналы
             socket.on('offer', (data) => {
                 const { meetingId, targetUserId, offer } = data;
-                console.log(`📡 Оффер от ${data.senderId || socket.id} для ${targetUserId}`);
-    
-    // Ищем получателя
-                const targetUser = this.findUserBySocketId(targetUserId);
-                if (targetUser) {
+                console.log(`📡 Оффер для ${targetUserId}`);
+                
+                // Ищем получателя по userId
+                const targetUser = this.findUserByUserId(targetUserId, meetingId);
+                if (targetUser && targetUser.socketId) {
                     socket.to(targetUser.socketId).emit('offer', {
                         senderId: this.users.get(socket.id)?.userId || socket.id,
                         offer: offer
                     });
                 }
             });
-
+            
             socket.on('answer', (data) => {
                 const { meetingId, targetUserId, answer } = data;
-                console.log(`📡 Ответ от ${data.senderId || socket.id} для ${targetUserId}`);
-    
-                const targetUser = this.findUserBySocketId(targetUserId);
-                if (targetUser) {
+                console.log(`📡 Ответ для ${targetUserId}`);
+                
+                const targetUser = this.findUserByUserId(targetUserId, meetingId);
+                if (targetUser && targetUser.socketId) {
                     socket.to(targetUser.socketId).emit('answer', {
                         senderId: this.users.get(socket.id)?.userId || socket.id,
                         answer: answer
                     });
                 }
             });
-
+            
             socket.on('ice-candidate', (data) => {
                 const { meetingId, targetUserId, candidate } = data;
-    
-                const targetUser = this.findUserBySocketId(targetUserId);
-                if (targetUser) {
+                
+                const targetUser = this.findUserByUserId(targetUserId, meetingId);
+                if (targetUser && targetUser.socketId) {
                     socket.to(targetUser.socketId).emit('ice-candidate', {
                         senderId: this.users.get(socket.id)?.userId || socket.id,
                         candidate: candidate
                     });
                 }
-            });
-
-// Добавьте метод для поиска по socketId
-            findUserBySocketId(socketId) {
-                for (const [id, userInfo] of this.users.entries()) {
-                    if (id === socketId || userInfo.userId === socketId) {
-                        return { socketId: id, ...userInfo };
-                    }
-             }
-             return null;
-            }
-            
-            // Пользователь готов к медиа
-            socket.on('media-ready', (data) => {
-                const { meetingId } = data;
-                socket.to(meetingId).emit('user-media-ready', {
-                    userId: this.users.get(socket.id)?.userId
-                });
             });
             
             // Выход из встречи
@@ -381,12 +309,19 @@ class VideoMeetServer {
         });
     }
     
+    // Метод для поиска пользователя по userId
     findUserByUserId(userId, meetingId) {
         for (const [socketId, userInfo] of this.users.entries()) {
             if (userInfo.userId === userId && userInfo.meetingId === meetingId) {
                 const meeting = this.meetings.get(meetingId);
                 if (meeting) {
-                    return meeting.participants.get(socketId);
+                    const participant = meeting.participants.get(socketId);
+                    if (participant) {
+                        return {
+                            socketId: socketId,
+                            ...participant
+                        };
+                    }
                 }
             }
         }
@@ -404,29 +339,17 @@ class VideoMeetServer {
                 // Удаляем пользователя из встречи
                 meeting.participants.delete(socket.id);
                 
-                // Если хост вышел, завершаем встречу
-                if (meeting.hostId === userId) {
-                    // Уведомляем всех участников
-                    meeting.participants.forEach((user, socketId) => {
-                        const userSocket = this.io.sockets.sockets.get(socketId);
-                        if (userSocket) {
-                            userSocket.emit('meeting-ended', {
-                                meetingId: meetingId,
-                                reason: 'Владелец покинул встречу'
-                            });
-                            userSocket.leave(meetingId);
-                        }
-                    });
-                    
+                // Уведомляем остальных участников
+                socket.to(meetingId).emit('user-left', {
+                    userId: userId
+                });
+                
+                console.log(`✅ Пользователь ${userId} покинул встречу ${meetingId}`);
+                
+                // Если комната пустая, удаляем ее
+                if (meeting.participants.size === 0) {
                     this.meetings.delete(meetingId);
-                    console.log(`✅ Встреча завершена хостом: ${meetingId}`);
-                } else {
-                    // Уведомляем остальных участников
-                    socket.to(meetingId).emit('user-left', {
-                        userId: userId
-                    });
-                    
-                    console.log(`✅ Пользователь ${userId} покинул встречу ${meetingId}`);
+                    console.log(`🗑️ Комната ${meetingId} удалена (пустая)`);
                 }
             }
             
@@ -451,7 +374,6 @@ class VideoMeetServer {
         this.server.listen(port, () => {
             console.log(`🚀 Сервер запущен на порту ${port}`);
             console.log(`🌐 Откройте http://localhost:${port}`);
-            console.log(`📁 Путь к public: ${path.join(__dirname, 'public')}`);
         });
     }
 }
@@ -459,4 +381,3 @@ class VideoMeetServer {
 // Запуск сервера
 const server = new VideoMeetServer();
 server.start();
-
