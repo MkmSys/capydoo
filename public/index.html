@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- УБЕРИТЕ CSP мета-тег - он блокирует скрипты -->
     <title>VideoMeet - Видеоконференции</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -31,11 +32,11 @@
             
             <div id="joinTab" class="tab-content">
                 <input type="text" id="userName" placeholder="Ваше имя" value="Участник">
-                <input type="text" id="meetingCode" placeholder="Код встречи или ссылка">
+                <input type="text" id="meetingCode" placeholder="Код встречи">
                 <button id="joinMeetingBtn" class="btn-primary">
                     <i class="fas fa-sign-in-alt"></i> Присоединиться
                 </button>
-                <p class="info-text">Попросите ссылку у организатора</p>
+                <p class="info-text">Попросите код встречи у организатора</p>
             </div>
         </div>
     </div>
@@ -62,9 +63,6 @@
             <div class="header-right">
                 <button id="toggleFullscreen" class="btn-icon" title="Полный экран">
                     <i class="fas fa-expand"></i>
-                </button>
-                <button id="settingsBtn" class="btn-icon" title="Настройки">
-                    <i class="fas fa-cog"></i>
                 </button>
             </div>
         </header>
@@ -94,7 +92,11 @@
                 <!-- Чат -->
                 <div class="panel">
                     <h3><i class="fas fa-comments"></i> Чат</h3>
-                    <div id="chatMessages" class="chat-messages"></div>
+                    <div id="chatMessages" class="chat-messages">
+                        <div class="message message-system">
+                            Добро пожаловать в VideoMeet!
+                        </div>
+                    </div>
                     <div class="chat-input">
                         <input type="text" id="chatInput" placeholder="Написать сообщение...">
                         <button id="sendChatBtn" class="btn-icon">
@@ -104,6 +106,8 @@
                 </div>
             </aside>
         </main>
+
+       
 
         <!-- Панель управления -->
         <footer>
@@ -227,3 +231,4 @@ setTimeout(function() {
 </script>
 
 </html>
+
