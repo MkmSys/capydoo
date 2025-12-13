@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoMeet - Видеоконференции</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Модальное окно входа -->
+    <div id="joinModal" class="modal show">
+        <div class="modal-content">
+            <div class="logo">
+                <i class="fas fa-video"></i>
+                <h1>VideoMeet</h1>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="create">Создать встречу</button>
+                <button class="tab-btn" data-tab="join">Присоединиться</button>
+            </div>
+            
+            <div id="createTab" class="tab-content active">
+                <input type="text" id="hostName" placeholder="Ваше имя" value="Ведущий">
+                <button id="createMeetingBtn" class="btn-primary">
+                    <i class="fas fa-plus"></i> Создать новую встречу
+                </button>
+                <p class="info-text">Ссылка будет создана автоматически</p>
+            </div>
+            
+            <div id="joinTab" class="tab-content">
+                <input type="text" id="userName" placeholder="Ваше имя" value="Участник">
+                <input type="text" id="meetingCode" placeholder="Код встречи или ссылка">
+                <button id="joinMeetingBtn" class="btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Присоединиться
+                </button>
+                <p class="info-text">Попросите ссылку у организатора</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Основной интерфейс встречи -->
+    <div id="meetingRoom" class="hidden">
+        <!-- Верхняя панель -->
+        <header>
+            <div class="header-left">
+                <div class="logo-small">
+                    <i class="fas fa-video"></i>
+                    <span>VideoMeet</span>
+                </div>
+                <div class="meeting-info">
+                    <span id="currentMeetingId">XXXX-XXXX</span>
+                    <button id="copyLinkBtn" class="btn-icon" title="Копировать ссылку">
+                        <i class="fas fa-link"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="timer" id="timer">00:00</div>
+            
+            <div class="header-right">
+                <button id="toggleFullscreen" class="btn-icon" title="Полный экран">
+                    <i class="fas fa-expand"></i>
+                </button>
+                <button id="settingsBtn" class="btn-icon" title="Настройки">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Основной контент -->
+        <main>
+            <!-- Видео-сетка -->
+            <div class="video-container">
+                <div id="videoGrid" class="video-grid"></div>
+                <div id="emptyState" class="empty-state">
+                    <i class="fas fa-user-friends"></i>
+                    <p>Пригласите участников по ссылке</p>
+                </div>
+            </div>
+
+            <!-- Боковая панель -->
+            <aside class="sidebar">
+                <!-- Участники -->
+                <div class="panel">
+                    <h3><i class="fas fa-users"></i> Участники <span id="participantCount">1</span></h3>
+                    <ul id="participantsList" class="participants-list"></ul>
+                    <button id="inviteBtn" class="btn-secondary">
+                        <i class="fas fa-user-plus"></i> Пригласить
+                    </button>
+                </div>
+
+                <!-- Чат -->
+                <div class="panel">
+                    <h3><i class="fas fa-comments"></i> Чат</h3>
+                    <div id="chatMessages" class="chat-messages"></div>
+                    <div class="chat-input">
+                        <input type="text" id="chatInput" placeholder="Написать сообщение...">
+                        <button id="sendChatBtn" class="btn-icon">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Панель управления -->
+        <footer>
+            <div class="controls">
+                <button id="toggleMicBtn" class="control-btn active" title="Микрофон (Ctrl+M)">
+                    <i class="fas fa-microphone"></i>
+                    <span>Выкл. звук</span>
+                </button>
+                
+                <button id="toggleCamBtn" class="control-btn active" title="Камера (Ctrl+E)">
+                    <i class="fas fa-video"></i>
+                    <span>Выкл. видео</span>
+                </button>
+                
+                <button id="screenShareBtn" class="control-btn" title="Демонстрация экрана (Ctrl+S)">
+                    <i class="fas fa-desktop"></i>
+                    <span>Экран</span>
+                </button>
+                
+                <button id="toggleChatBtn" class="control-btn" title="Чат (Ctrl+T)">
+                    <i class="fas fa-comment"></i>
+                    <span>Чат</span>
+                </button>
+                
+                <div class="center-controls">
+                    <button id="recordBtn" class="control-btn" title="Запись">
+                        <i class="fas fa-circle"></i>
+                        <span>Запись</span>
+                    </button>
+                    
+                    <button id="moreBtn" class="control-btn" title="Еще">
+                        <i class="fas fa-ellipsis-h"></i>
+                        <span>Еще</span>
+                    </button>
+                </div>
+                
+                <button id="leaveBtn" class="control-btn leave-btn" title="Выйти">
+                    <i class="fas fa-phone-slash"></i>
+                    <span>Выйти</span>
+                </button>
+            </div>
+        </footer>
+
+        <!-- Модальное окно приглашения -->
+        <div id="inviteModal" class="modal">
+            <div class="modal-content">
+                <h2><i class="fas fa-share-alt"></i> Пригласить участников</h2>
+                <div class="invite-options">
+                    <div class="invite-option">
+                        <h4><i class="fas fa-link"></i> Ссылка</h4>
+                        <div class="link-container">
+                            <input type="text" id="meetingLink" readonly>
+                            <button id="copyInviteLink" class="btn-primary">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="invite-option">
+                        <h4><i class="fas fa-key"></i> Код встречи</h4>
+                        <div class="code-display">
+                            <span id="meetingCodeDisplay">XXXX-XXXX</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-close" id="closeInviteModal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключение библиотек -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <script src="/app.js"></script>
+    <script src="/webrtc.js"></script>
+</body>
+</html>
