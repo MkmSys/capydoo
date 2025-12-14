@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎥 Простой Видеозвонок</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Экран входа -->
+    <div id="loginScreen" class="screen active">
+        <div class="login-container">
+            <div class="logo">
+                <i class="fas fa-video"></i>
+                <h1>Простой Видеозвонок</h1>
+            </div>
+            
+            <div class="login-form">
+                <input type="text" id="userName" placeholder="Ваше имя" value="Участник">
+                
+                <div class="button-group">
+                    <button id="createRoomBtn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Создать встречу
+                    </button>
+                    <button id="joinRoomBtn" class="btn btn-secondary">
+                        <i class="fas fa-sign-in-alt"></i> Присоединиться
+                    </button>
+                </div>
+                
+                <div id="joinForm" style="display: none; margin-top: 20px;">
+                    <input type="text" id="roomCode" placeholder="Код встречи">
+                    <button id="confirmJoinBtn" class="btn btn-primary">
+                        <i class="fas fa-check"></i> Войти
+                    </button>
+                </div>
+            </div>
+            
+            <div class="info">
+                <p>🎯 Простой и рабочий видеозвонок в один клик</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Комната встречи -->
+    <div id="roomScreen" class="screen">
+        <!-- Шапка -->
+        <div class="header">
+            <div class="room-info">
+                <span class="room-id" id="currentRoomId">XXXX-XXXX</span>
+                <button id="copyLinkBtn" class="btn-icon" title="Копировать ссылку">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </div>
+            <div class="timer" id="timer">00:00</div>
+            <div class="participants-count">
+                <i class="fas fa-users"></i> <span id="participantCount">1</span>
+            </div>
+        </div>
+
+        <!-- Основной контент -->
+        <div class="main-content">
+            <!-- Видео сетка -->
+            <div id="videoGrid" class="video-grid">
+                <!-- Видео участников будут добавляться здесь -->
+            </div>
+
+            <!-- Боковая панель -->
+            <div class="sidebar">
+                <!-- Чат -->
+                <div class="chat-box">
+                    <h3><i class="fas fa-comments"></i> Чат</h3>
+                    <div id="chatMessages" class="chat-messages">
+                        <div class="system-message">Добро пожаловать!</div>
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" id="chatInput" placeholder="Написать сообщение...">
+                        <button id="sendMessageBtn"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Панель управления -->
+        <div class="controls">
+            <button id="toggleMicBtn" class="control-btn active" title="Микрофон">
+                <i class="fas fa-microphone"></i>
+                <span>Выкл</span>
+            </button>
+            
+            <button id="toggleCamBtn" class="control-btn active" title="Камера">
+                <i class="fas fa-video"></i>
+                <span>Выкл</span>
+            </button>
+            
+            <button id="screenShareBtn" class="control-btn" title="Демонстрация экрана">
+                <i class="fas fa-desktop"></i>
+                <span>Экран</span>
+            </button>
+            
+            <button id="leaveBtn" class="control-btn danger" title="Выйти">
+                <i class="fas fa-phone-slash"></i>
+                <span>Выйти</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Подключение библиотек -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
