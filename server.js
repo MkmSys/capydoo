@@ -1,4 +1,3 @@
-
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -6,14 +5,23 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 // Раздача статических файлов
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Хранилище комнат
+const rooms = new Map();
+
 // API для создания комнаты
 app.get('/create-room', (req, res) => {
     const roomId = generateRoomId();
+    rooms.set(roomId, new Map());
     res.json({ roomId: roomId });
 });
 
@@ -21,9 +29,6 @@ app.get('/create-room', (req, res) => {
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-// Хранилище комнат
-const rooms = new Map();
 
 // Socket.io
 io.on('connection', (socket) => {
@@ -35,7 +40,7 @@ io.on('connection', (socket) => {
         
         console.log(`🔗 ${userName} присоединяется к ${roomId}`);
         
-        // Создаем комнату если ее нет
+        // Проверяем существует ли комната
         if (!rooms.has(roomId)) {
             rooms.set(roomId, new Map());
         }
@@ -52,19 +57,34 @@ io.on('connection', (socket) => {
         // Присоединяем сокет к комнате
         socket.join(roomId);
         
-        // Отправляем подтверждение
+        // Отправляем подтверждение НОВОМУ пользователю
+        const otherUsers = Array.from(room.values()).filter(u => u.id !== socket.id);
         socket.emit('room-joined', {
             roomId: roomId,
-            users: Array.from(room.values()).filter(u => u.id !== socket.id)
+            users: otherUsers.map(u => ({ id: u.id, name: u.name }))
         });
         
-        // Уведомляем других участников
+        // Уведомляем ДРУГИХ участников
         socket.to(roomId).emit('user-joined', {
             userId: socket.id,
             userName: userName
         });
         
-        console.log(`✅ ${userName} в комнате ${roomId}`);
+        console.log(`✅ ${userName} в комнате ${roomId}, участников: ${room.size}`);
+    });
+
+    // ЧАТ: Сообщение
+    socket.on('chat-message', (data) => {
+        const { roomId, userName, message } = data;
+        
+        // Отправляем всем в комнате, включая отправителя
+        io.to(roomId).emit('chat-message', {
+            userName: userName,
+            message: message,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+        
+        console.log(`💬 ${userName} в ${roomId}: ${message}`);
     });
 
     // WebRTC сигналы
