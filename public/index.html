@@ -2,10 +2,62 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🎥 Простой Видеозвонок</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Дополнительные стили для мобильных */
+        @media (max-width: 768px) {
+            .video-grid {
+                grid-template-columns: 1fr !important;
+                padding: 5px !important;
+            }
+            
+            .video-container {
+                min-height: 180px !important;
+            }
+            
+            .controls {
+                width: 95% !important;
+                padding: 8px 16px !important;
+                border-radius: 25px !important;
+            }
+            
+            .control-btn {
+                min-width: 60px !important;
+                padding: 8px !important;
+            }
+            
+            .control-btn span {
+                font-size: 10px !important;
+            }
+            
+            .sidebar {
+                max-height: 40vh !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            
+            .chat-messages {
+                max-height: 200px !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+        }
+        
+        /* Исправление скролла на iOS */
+        * {
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        html, body {
+            overflow: hidden;
+            height: 100%;
+            position: fixed;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
     <!-- Экран входа -->
@@ -17,27 +69,39 @@
             </div>
             
             <div class="login-form">
-                <input type="text" id="userName" placeholder="Ваше имя" value="Участник">
+                <div class="input-group">
+                    <input type="text" id="userName" placeholder="Ваше имя" value="Участник">
+                </div>
                 
                 <div class="button-group">
                     <button id="createRoomBtn" class="btn btn-primary">
                         <i class="fas fa-plus"></i> Создать встречу
                     </button>
-                    <button id="joinRoomBtn" class="btn btn-secondary">
+                    <div class="divider">или</div>
+                    <button id="showJoinFormBtn" class="btn btn-secondary">
                         <i class="fas fa-sign-in-alt"></i> Присоединиться
                     </button>
                 </div>
                 
                 <div id="joinForm" style="display: none; margin-top: 20px;">
-                    <input type="text" id="roomCode" placeholder="Код встречи">
-                    <button id="confirmJoinBtn" class="btn btn-primary">
-                        <i class="fas fa-check"></i> Войти
-                    </button>
+                    <div class="input-group">
+                        <input type="text" id="roomCode" placeholder="Код встречи (например: ABCD-1234)">
+                    </div>
+                    <div class="button-group">
+                        <button id="confirmJoinBtn" class="btn btn-primary">
+                            <i class="fas fa-check"></i> Войти в комнату
+                        </button>
+                        <button id="cancelJoinBtn" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Отмена
+                        </button>
+                    </div>
                 </div>
             </div>
             
             <div class="info">
-                <p>🎯 Простой и рабочий видеозвонок в один клик</p>
+                <p><i class="fas fa-check-circle"></i> Рабочий звук и видео</p>
+                <p><i class="fas fa-check-circle"></i> Чат в реальном времени</p>
+                <p><i class="fas fa-check-circle"></i> Поддержка мобильных устройств</p>
             </div>
         </div>
     </div>
@@ -51,31 +115,37 @@
                 <button id="copyLinkBtn" class="btn-icon" title="Копировать ссылку">
                     <i class="fas fa-copy"></i>
                 </button>
+                <button id="showParticipantsBtn" class="btn-icon" title="Участники">
+                    <i class="fas fa-users"></i> <span id="participantCount">1</span>
+                </button>
             </div>
             <div class="timer" id="timer">00:00</div>
-            <div class="participants-count">
-                <i class="fas fa-users"></i> <span id="participantCount">1</span>
-            </div>
         </div>
 
         <!-- Основной контент -->
         <div class="main-content">
             <!-- Видео сетка -->
-            <div id="videoGrid" class="video-grid">
-                <!-- Видео участников будут добавляться здесь -->
+            <div class="video-section">
+                <div id="videoGrid" class="video-grid">
+                    <!-- Видео участников будут добавляться здесь -->
+                </div>
             </div>
 
             <!-- Боковая панель -->
             <div class="sidebar">
                 <!-- Чат -->
                 <div class="chat-box">
-                    <h3><i class="fas fa-comments"></i> Чат</h3>
+                    <h3><i class="fas fa-comments"></i> Чат <button id="clearChatBtn" class="btn-icon small">Очистить</button></h3>
                     <div id="chatMessages" class="chat-messages">
-                        <div class="system-message">Добро пожаловать!</div>
+                        <div class="message system-message">
+                            <strong>Система:</strong> Добро пожаловать в видеозвонок!
+                        </div>
                     </div>
                     <div class="chat-input">
-                        <input type="text" id="chatInput" placeholder="Написать сообщение...">
-                        <button id="sendMessageBtn"><i class="fas fa-paper-plane"></i></button>
+                        <input type="text" id="chatInput" placeholder="Написать сообщение..." autocomplete="off">
+                        <button id="sendMessageBtn" class="btn-icon">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -98,6 +168,11 @@
                 <span>Экран</span>
             </button>
             
+            <button id="toggleChatBtn" class="control-btn" title="Показать/скрыть чат">
+                <i class="fas fa-comment"></i>
+                <span>Чат</span>
+            </button>
+            
             <button id="leaveBtn" class="control-btn danger" title="Выйти">
                 <i class="fas fa-phone-slash"></i>
                 <span>Выйти</span>
@@ -108,5 +183,33 @@
     <!-- Подключение библиотек -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="app.js"></script>
+    
+    <script>
+        // Простой скрипт для управления вкладками на мобильных
+        document.addEventListener('DOMContentLoaded', function() {
+            // Кнопки формы присоединения
+            document.getElementById('showJoinFormBtn').addEventListener('click', function() {
+                document.getElementById('joinForm').style.display = 'block';
+                this.style.display = 'none';
+                document.getElementById('createRoomBtn').style.display = 'none';
+            });
+            
+            document.getElementById('cancelJoinBtn').addEventListener('click', function() {
+                document.getElementById('joinForm').style.display = 'none';
+                document.getElementById('showJoinFormBtn').style.display = 'block';
+                document.getElementById('createRoomBtn').style.display = 'block';
+            });
+            
+            // Фикс для iOS скролла
+            document.body.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+            }, { passive: false });
+            
+            // Разрешаем скролл в чате
+            document.getElementById('chatMessages').addEventListener('touchmove', function(e) {
+                e.stopPropagation();
+            }, { passive: true });
+        });
+    </script>
 </body>
 </html>
